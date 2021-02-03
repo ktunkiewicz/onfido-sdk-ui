@@ -3,18 +3,21 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-rm -rf ./certs
-mkdir -p ./certs
-cp ../{key,cert}.pem ./certs/
+CERTS_DIR="./certs"
+FRONTEND_DIR="./frontend"
 
-rm -rf ./frontend
-mkdir -p ./frontend
+rm -rf "$CERTS_DIR"
+mkdir -p "$CERTS_DIR"
+cp ../{key,cert}.pem "$CERTS_DIR"
 
-cp ../../dist/index.html ./frontend/
-cp ../../dist/demo.min.js{,.map} ./frontend/
-cp ../../dist/onfido.min.js{,.map} ./frontend/
-cp ../../dist/onfido.crossDevice.min.js{,.map} ./frontend/
-cp ../../dist/onfido.vendors~crossDevice.min.js{,.map} ./frontend/
+rm -rf "$FRONTEND_DIR"
+mkdir -p "$FRONTEND_DIR"
 
-cp ../../dist/onfido.vendors~crossDevice.css{,.map} ./frontend/
-cp ../../dist/style.css{,.map} ./frontend/
+cp ../../dist/index.html "$FRONTEND_DIR"
+cp ../../dist/demo.min.js{,.map} "$FRONTEND_DIR"
+cp ../../dist/onfido.min.js{,.map} "$FRONTEND_DIR"
+cp ../../dist/onfido.crossDevice.min.js{,.map} "$FRONTEND_DIR"
+cp ../../dist/onfido.vendors~crossDevice.min.js{,.map} "$FRONTEND_DIR"
+
+cp ../../dist/onfido.vendors~crossDevice.css{,.map} "$FRONTEND_DIR"
+cp ../../dist/style.css{,.map} "$FRONTEND_DIR"
