@@ -1,0 +1,159 @@
+{
+  "8e9a94dce9eb203310478f6e6fcc34fd7fe0ca34": {
+    "e026e403521497c25898783a4e521d3663a68f18": {
+      "id": "9b3a22e9-99ef-449c-a889-2b8e3a0a8586",
+      "created_at": "2021-02-03T16:54:14Z",
+      "file_name": "blob",
+      "file_type": "",
+      "file_size": 223029,
+      "type": "passport",
+      "side": null,
+      "issuing_country": null,
+      "sdk_warnings": {
+        "detect_glare": {
+          "valid": true
+        },
+        "image_quality": {
+          "quality": "bad",
+          "breakdown": {
+            "blur": {
+              "has_blur": false,
+              "max": 1,
+              "min": 0,
+              "score": 0.60896360874176,
+              "threshold": 0.2012
+            },
+            "cutoff": {
+              "has_cutoff": true,
+              "max": 1,
+              "min": 0,
+              "score": 0.00540540540540541,
+              "threshold": 0.015
+            },
+            "document": {
+              "detection_score": 0.999979615,
+              "has_document": true,
+              "max": 1,
+              "min": 0,
+              "threshold": 0.9887919909
+            },
+            "has_document": true
+          },
+          "image_quality_uuid": "8bfe7065-cf02-4734-b9b0-8e42200d1054"
+        }
+      },
+      "applicant_id": "13ac29f1-2491-41f2-8b03-0a92cc0ad87a",
+      "href": "/v3/documents/9b3a22e9-99ef-449c-a889-2b8e3a0a8586",
+      "download_href": "/v3/documents/9b3a22e9-99ef-449c-a889-2b8e3a0a8586/download"
+    },
+    "fe5f620abf2e3f3534fe9a014de60cafacbf91a7": {
+      "id": "cd3ef606-1e8b-4f3b-8954-87d323d04958",
+      "created_at": "2021-02-03T16:54:13Z",
+      "file_name": "blob",
+      "file_type": "",
+      "file_size": 223029,
+      "type": "passport",
+      "side": null,
+      "issuing_country": null,
+      "sdk_warnings": {
+        "detect_glare": {
+          "valid": true
+        },
+        "image_quality": {
+          "quality": "bad",
+          "breakdown": {
+            "blur": {
+              "has_blur": false,
+              "max": 1,
+              "min": 0,
+              "score": 0.60896360874176,
+              "threshold": 0.2012
+            },
+            "cutoff": {
+              "has_cutoff": true,
+              "max": 1,
+              "min": 0,
+              "score": 0.00540540540540541,
+              "threshold": 0.015
+            },
+            "document": {
+              "detection_score": 0.999979615,
+              "has_document": true,
+              "max": 1,
+              "min": 0,
+              "threshold": 0.9887919909
+            },
+            "has_document": true
+          },
+          "image_quality_uuid": "1920a728-8fbc-4e4a-ab67-2a2fbd5e530e"
+        }
+      },
+      "applicant_id": "13ac29f1-2491-41f2-8b03-0a92cc0ad87a",
+      "href": "/v3/documents/cd3ef606-1e8b-4f3b-8954-87d323d04958",
+      "download_href": "/v3/documents/cd3ef606-1e8b-4f3b-8954-87d323d04958/download"
+    },
+    "2cffa331e5565a6ff4a64e7a16d88b3477031ac8": {
+      "id": "dcc33a04-8966-405b-882a-5787ca3c240a",
+      "created_at": "2021-02-03T16:54:16Z",
+      "file_name": "blob",
+      "file_type": "",
+      "file_size": 223029,
+      "type": "passport",
+      "side": null,
+      "issuing_country": null,
+      "sdk_warnings": {
+        "detect_glare": {
+          "valid": true
+        },
+        "detect_cutoff": {
+          "valid": false
+        },
+        "detect_blur": {
+          "valid": true
+        },
+        "image_quality": {
+          "quality": "bad",
+          "breakdown": {
+            "blur": {
+              "has_blur": false,
+              "max": 1,
+              "min": 0,
+              "score": 0.60896360874176,
+              "threshold": 0.2012
+            },
+            "cutoff": {
+              "has_cutoff": true,
+              "max": 1,
+              "min": 0,
+              "score": 0.00540540540540541,
+              "threshold": 0.015
+            },
+            "document": {
+              "detection_score": 0.999979615,
+              "has_document": true,
+              "max": 1,
+              "min": 0,
+              "threshold": 0.9887919909
+            },
+            "has_document": true
+          },
+          "image_quality_uuid": "73b8469c-35b6-4184-84ab-b18041031818"
+        }
+      },
+      "applicant_id": "13ac29f1-2491-41f2-8b03-0a92cc0ad87a",
+      "href": "/v3/documents/dcc33a04-8966-405b-882a-5787ca3c240a",
+      "download_href": "/v3/documents/dcc33a04-8966-405b-882a-5787ca3c240a/download"
+    },
+    "3fdaee45266ec2ef621dbb310256df52ebfba24c": {
+      "error": {
+        "type": "validation_error",
+        "message": "There was a validation error on this request",
+        "fields": {
+          "detect_cutoff": [
+            "cutoff document detected in image"
+          ]
+        }
+      }
+    }
+  }
+}
