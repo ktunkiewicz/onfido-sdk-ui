@@ -6,8 +6,12 @@ WORKDIR /app
 
 USER deno
 
-COPY *.ts *.pem lock.json /app/
+COPY lock.json /app/
+COPY /src/* /app/src/
+COPY /certs/* /app/certs/
 COPY /frontend/* /app/frontend/
-RUN deno cache deps.ts --lock=lock.json
+RUN deno cache src/deps.ts --lock=lock.json
+
+WORKDIR /app/src
 
 CMD ["run", "--allow-net", "--allow-read", "--allow-write", "server.ts"]

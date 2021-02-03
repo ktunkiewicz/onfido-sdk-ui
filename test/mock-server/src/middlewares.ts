@@ -24,7 +24,7 @@ export const loggerMiddleware: Middleware = async (context, next) => {
 export const frontendMiddleware: Middleware = async (context) => {
   // Serve Preact app
   await send(context, context.request.url.pathname, {
-    root: `${Deno.cwd()}/frontend`,
+    root: '../frontend',
     index: 'index.html',
   })
 }
