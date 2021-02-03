@@ -21,5 +21,5 @@ dist/onfido.crossDevice.css.map
 dist/onfido.crossDevice.css
 dist/previewer*
 dist/*~*
-test/mock-server/*.pem
+test/mock-server/certs/
 test/mock-server/frontend/

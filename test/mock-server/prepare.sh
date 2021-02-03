@@ -3,7 +3,9 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-cp ../{key,cert}.pem ./
+rm -rf ./certs
+mkdir -p ./certs
+cp ../{key,cert}.pem ./certs/
 
 rm -rf ./frontend
 mkdir -p ./frontend
