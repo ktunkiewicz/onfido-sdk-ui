@@ -33,14 +33,15 @@ $unit-rrui: 1em;
 
 $font-family: 'Open Sans', sans-serif;
 
-$large-text-margin: 40 * $unit;
+$large-text-margin: 32 * $unit;
 $small-text-margin: 24 * $unit;
+$smaller-text-margin: 16 * $unit;
 $padding-lg: 16 * $unit;
 $padding-sm: 10 * $unit;
 $padding-xs: 8 * $unit;
 
-$footer-height: 32 * $unit;
-$footer-margin: 16 * $unit;
+$footer-height: 40 * $unit;
+$footer-margin: 0 * $unit;
 $navigation-height: 32 * $unit;
 $navigation-height-sm-screen: 38 * $unit;
 $navigation-padding-top: $padding-lg;
@@ -146,4 +147,14 @@ $color-camera-button-active: $color-primary-button-active;
 
 @mixin width-parent-relative($base-width, $parent-width) {
   width: 100% * ($base-width/$parent-width);
+}
+
+%global-margin {
+  margin: 0 $large-text-margin;
+  @media (--small-viewport) {
+    margin: 0 $small-text-margin;
+  }
+  @media (--smaller-viewport) {
+    margin: 0 $smaller-text-margin;
+  }
 }
