@@ -13,14 +13,17 @@
     "outDir": "./dist/",
     "paths": {
       "~jest/*": ["../test/utils/jest/*"],
+      "~locales": ["locales/index"],
       "~types/*": ["types/*"],
+      "~utils": ["components/utils/index"],
       "~utils/*": ["components/utils/*"]
     },
     "resolveJsonModule": true,
     "sourceMap": true,
     "target": "es5",
     "types": ["jest"],
-    "typeRoots": ["./typings", "./node_modules/@types"]
+    "typeRoots": ["./typings", "./node_modules/@types"],
+    "downlevelIteration": true
   },
   "exclude": ["./test/mock-server"]
 }
