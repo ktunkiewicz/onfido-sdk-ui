@@ -1,6 +1,7 @@
 import { h, render, FunctionComponent } from 'preact'
 import { BrowserRouter as Router, Route, Link } from 'react-router-dom'
 import { queryParamToValueString } from './demoUtils'
+import ApiTests from './ApiTests'
 import SdkDemo from './SdkDemo'
 
 const Header: FunctionComponent = () => <h1>Onfido SDK UI Demo</h1>
@@ -60,6 +61,11 @@ const renderDemoApp = () => {
       messagePort.onmessage = onMessage
     }
   })
+
+  if (window.location.pathname === '/api-tests') {
+    render(<ApiTests />, rootNode)
+    return
+  }
 
   if (window.location.pathname === '/') {
     render(
