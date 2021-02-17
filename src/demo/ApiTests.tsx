@@ -1,7 +1,15 @@
 import { h, FunctionComponent } from 'preact'
 import { memo, useEffect, useState } from 'preact/compat'
 
-const REQUEST_ENV = 'pre-prod'
+const QUERY_PARAMS = window.location.search
+  .slice(1)
+  .split('&')
+  .reduce((acc: Record<string, unknown>, cur: string) => {
+    const [key, value] = cur.split('=')
+    return { ...acc, [key]: value }
+  }, {})
+
+const REQUEST_ENV = QUERY_PARAMS.env || 'pre-prod'
 
 const handleRequestFailed = (request: XMLHttpRequest): Error => {
   const error = new Error('Request failed')
