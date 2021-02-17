@@ -5,3 +5,5 @@ export type ApplicantData = {
   last_name?: string
   email?: string
 }
+
+export type ApiTestEnvs = 'dev' | 'pre-prod' | 'production'

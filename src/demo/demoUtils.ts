@@ -6,7 +6,7 @@ import type {
   StepTypes,
 } from '~types/steps'
 import type { ServerRegions, SdkOptions } from '~types/sdk'
-import type { ApplicantData, StringifiedBoolean } from './types'
+import type { ApiTestEnvs, ApplicantData, StringifiedBoolean } from './types'
 
 export type QueryParams = {
   countryCode?: StringifiedBoolean
@@ -39,6 +39,7 @@ export type QueryParams = {
   useMultipleSelfieCapture?: StringifiedBoolean
   useUploader?: StringifiedBoolean
   useWebcam?: StringifiedBoolean
+  v4ApiTests?: ApiTestEnvs
 }
 
 export type CheckData = {

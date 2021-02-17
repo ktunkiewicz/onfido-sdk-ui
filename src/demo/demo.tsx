@@ -38,7 +38,7 @@ const DummyHostApp: FunctionComponent = () => (
 const renderDemoApp = () => {
   let messagePort: MessagePort = null
   const rootNode = document.getElementById('demo-app')
-  const { useHistory } = queryParamToValueString
+  const { useHistory, v4ApiTests } = queryParamToValueString
 
   const onMessage = (event: MessageEvent) => {
     if (event.data.type === 'RENDER') {
@@ -62,8 +62,8 @@ const renderDemoApp = () => {
     }
   })
 
-  if (window.location.pathname === '/api-tests') {
-    render(<ApiTests />, rootNode)
+  if (v4ApiTests) {
+    render(<ApiTests env={v4ApiTests} />, rootNode)
     return
   }
 

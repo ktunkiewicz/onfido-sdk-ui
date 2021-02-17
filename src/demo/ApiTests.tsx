@@ -1,15 +1,7 @@
 import { h, FunctionComponent } from 'preact'
 import { memo, useEffect, useState } from 'preact/compat'
 
-const QUERY_PARAMS = window.location.search
-  .slice(1)
-  .split('&')
-  .reduce((acc: Record<string, unknown>, cur: string) => {
-    const [key, value] = cur.split('=')
-    return { ...acc, [key]: value }
-  }, {})
-
-const REQUEST_ENV = QUERY_PARAMS.env || 'pre-prod'
+import type { ApiTestEnvs } from './types'
 
 const handleRequestFailed = (request: XMLHttpRequest): Error => {
   const error = new Error('Request failed')
@@ -17,12 +9,12 @@ const handleRequestFailed = (request: XMLHttpRequest): Error => {
   return error
 }
 
-const getToken = (): Promise<string | undefined> =>
+const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
   new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
     request.open(
       'GET',
-      `https://sdk-token-factory.eu-west-1.${REQUEST_ENV}.onfido.xyz/sdk_token`
+      `https://sdk-token-factory.eu-west-1.${env}.onfido.xyz/sdk_token`
     )
 
     request.setRequestHeader(
@@ -45,6 +37,7 @@ const getToken = (): Promise<string | undefined> =>
   })
 
 const uploadBinaryMedia = (
+  env: ApiTestEnvs,
   token: string,
   file: File
 ): Promise<Record<string, unknown>> =>
@@ -52,7 +45,7 @@ const uploadBinaryMedia = (
     const request = new XMLHttpRequest()
     request.open(
       'POST',
-      `https://api-gateway.eu-west-1.${REQUEST_ENV}.onfido.xyz/v4/binary_media`
+      `https://api-gateway.eu-west-1.${env}.onfido.xyz/v4/binary_media`
     )
 
     request.setRequestHeader('Authorization', `Bearer ${token}`)
@@ -73,18 +66,23 @@ const uploadBinaryMedia = (
     request.send(formData)
   })
 
-const ApiTests: FunctionComponent = () => {
-  const [token, setToken] = useState(null)
+type Props = {
+  env: ApiTestEnvs
+}
 
+const ApiTests: FunctionComponent<Props> = ({ env }) => {
+  const [token, setToken] = useState(null)
   const [file, setFile] = useState<File>(null)
+  const [error, setError] = useState<Error>(null)
+
   useEffect(() => {
-    getToken().then(setToken)
-  }, [])
+    getToken(env).then(setToken)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFormSubmit = (event: Event) => {
-    uploadBinaryMedia(token, file)
+    uploadBinaryMedia(env, token, file)
       .then((data) => console.log(data))
-      .catch((error) => console.log(error))
+      .catch(setError)
     event.preventDefault()
   }
 
@@ -93,12 +91,28 @@ const ApiTests: FunctionComponent = () => {
     setFile(input.files[0])
   }
 
+  if (!token) {
+    return <span>Fetching token...</span>
+  }
+
   return (
-    <div>
-      <h1>/v4 APIs tests</h1>
-      <form onSubmit={handleFormSubmit}>
+    <div style={{ margin: '0 auto', maxWidth: '30em' }}>
+      <h1>v4 API tests</h1>
+      <form
+        onSubmit={handleFormSubmit}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
         <input type="file" onChange={handleFileChanged} />
-        {token && file && <button type="submit">Upload</button>}
+        {file && (
+          <button type="submit" style={{ margin: '1em 0' }}>
+            Upload
+          </button>
+        )}
+        {error && <pre>Error: {error.message}</pre>}
       </form>
     </div>
   )
