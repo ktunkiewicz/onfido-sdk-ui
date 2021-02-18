@@ -3,10 +3,40 @@ import { memo, useEffect, useState } from 'preact/compat'
 
 import type { ApiTestEnvs } from './types'
 
-const handleRequestFailed = (request: XMLHttpRequest): Error => {
+interface ExtendedError extends Error {
+  meta: XMLHttpRequest | Record<string, unknown>
+}
+
+type BinaryMediaReponse = {
+  media_id: string
+}
+
+type BinaryMediaPayload = {
+  binary_media: { uuid: string }
+}
+
+type DocumentFieldPayload = {
+  name: string
+  raw_value: string
+  source: string
+}
+
+type DocumentFieldsList = {
+  document_fields: DocumentFieldPayload[]
+}
+
+type CreateDocumentResponse = {
+  applicant_uuid: string
+  document_uuid: string
+  document_media: Array<BinaryMediaPayload | DocumentFieldsList>
+}
+
+const handleRequestFailed = (
+  meta: XMLHttpRequest | Record<string, unknown>
+): ExtendedError => {
   const error = new Error('Request failed')
-  Object.assign(error, { meta: request })
-  return error
+  Object.assign(error, { meta })
+  return error as ExtendedError
 }
 
 const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
@@ -23,11 +53,13 @@ const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
     )
 
     request.onload = () => {
+      const response = JSON.parse(request.response)
+
       if (request.status === 200 || request.status === 201) {
-        const { message: token } = JSON.parse(request.response) || {}
+        const { message: token } = response || {}
         resolve(token)
       } else {
-        reject(handleRequestFailed(request))
+        reject(handleRequestFailed(response))
       }
     }
 
@@ -36,11 +68,11 @@ const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
     request.send()
   })
 
-const uploadBinaryMedia = (
+export const uploadBinaryMedia = (
   env: ApiTestEnvs,
   token: string,
   file: File
-): Promise<Record<string, unknown>> =>
+): Promise<BinaryMediaReponse> =>
   new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
     request.open(
@@ -52,10 +84,12 @@ const uploadBinaryMedia = (
     request.setRequestHeader('Content-Type', 'multipart/form-data')
 
     request.onload = () => {
+      const response = JSON.parse(request.response)
+
       if (request.status === 200 || request.status === 201) {
-        resolve(JSON.parse(request.response))
+        resolve(response)
       } else {
-        reject(handleRequestFailed(request))
+        reject(handleRequestFailed(response))
       }
     }
 
@@ -66,29 +100,91 @@ const uploadBinaryMedia = (
     request.send(formData)
   })
 
+const createDocument = (
+  env: ApiTestEnvs,
+  token: string,
+  uuids: string[]
+): Promise<CreateDocumentResponse> =>
+  new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    request.open(
+      'POST',
+      `https://api-gateway.eu-west-1.${env}.onfido.xyz/v4/documents`
+    )
+
+    request.setRequestHeader('Authorization', `Bearer ${token}`)
+    request.setRequestHeader('Content-Type', 'application/json')
+
+    request.onload = () => {
+      const response = JSON.parse(request.response)
+
+      if (request.status === 200 || request.status === 201) {
+        resolve(response)
+      } else {
+        reject(handleRequestFailed(response))
+      }
+    }
+
+    request.onerror = () => reject(handleRequestFailed(request))
+
+    const body = {
+      document_media: uuids.map((uuid) => ({ binary_media: uuid })),
+    }
+    request.send(JSON.stringify(body))
+  })
+
 type Props = {
   env: ApiTestEnvs
 }
 
 const ApiTests: FunctionComponent<Props> = ({ env }) => {
   const [token, setToken] = useState(null)
-  const [file, setFile] = useState<File>(null)
-  const [error, setError] = useState<Error>(null)
+  const [frontCapture, setFrontCapture] = useState<File>(null)
+  const [backCapture, setBackCapture] = useState<File>(null)
+  const [error, setError] = useState<ExtendedError>(null)
+  const [response, setResponse] = useState<CreateDocumentResponse>(null)
 
   useEffect(() => {
     getToken(env).then(setToken)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const handleUploads = async () => {
+    setError(null)
+    const uuids: string[] = []
+
+    try {
+      const { media_id: frontUuid } = await uploadBinaryMedia(
+        env,
+        token,
+        frontCapture
+      )
+      uuids.push(frontUuid)
+
+      if (backCapture) {
+        const { media_id: backUuid } = await uploadBinaryMedia(
+          env,
+          token,
+          backCapture
+        )
+        uuids.push(backUuid)
+      }
+
+      const createDocumentRes = await createDocument(env, token, uuids)
+      setResponse(createDocumentRes)
+    } catch (error) {
+      setError(error)
+    }
+  }
+
   const handleFormSubmit = (event: Event) => {
-    uploadBinaryMedia(env, token, file)
-      .then((data) => console.log(data))
-      .catch(setError)
     event.preventDefault()
+    handleUploads()
   }
 
   const handleFileChanged = (event: Event) => {
     const input = event.target as HTMLInputElement
-    setFile(input.files[0])
+    setFrontCapture(input.files[0])
+    setBackCapture(input.files[1])
   }
 
   if (!token) {
@@ -106,13 +202,24 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
           alignItems: 'center',
         }}
       >
-        <input type="file" onChange={handleFileChanged} />
-        {file && (
+        <input type="file" multiple onChange={handleFileChanged} />
+        {frontCapture && (
           <button type="submit" style={{ margin: '1em 0' }}>
             Upload
           </button>
         )}
-        {error && <pre>Error: {error.message}</pre>}
+        {error && (
+          <div style={{ textAlign: 'left' }}>
+            <pre>Error: {error.message}</pre>
+            <pre>{JSON.stringify(error.meta, null, 2)}</pre>
+          </div>
+        )}
+        {response && (
+          <div style={{ textAlign: 'left' }}>
+            <pre>Response:</pre>
+            <pre>{JSON.stringify(response, null, 2)}</pre>
+          </div>
+        )}
       </form>
     </div>
   )
