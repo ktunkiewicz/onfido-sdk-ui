@@ -29,6 +29,7 @@ type CreateDocumentResponse = {
   applicant_uuid: string
   document_uuid: string
   document_media: Array<BinaryMediaPayload | DocumentFieldsList>
+  document_type: 'IDENTITY_DOCUMENT' | 'OTHERS'
 }
 
 export const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
@@ -141,7 +142,7 @@ const createDocument = (
     request.onerror = () => reject(handleRequestFailed(request))
 
     const body = {
-      document_media: uuids.map((uuid) => ({ binary_media: uuid })),
+      document_media: uuids.map((uuid) => ({ binary_media: { uuid } })),
     }
     request.send(JSON.stringify(body))
   })

@@ -8365,12 +8365,6 @@
     "path": "node_modules/eslint/node_modules/mute-stream",
     "licenseFile": "node_modules/eslint/node_modules/mute-stream/LICENSE"
   },
-  "nan@2.14.2": {
-    "licenses": "MIT",
-    "repository": "https://github.com/nodejs/nan",
-    "path": "node_modules/nan",
-    "licenseFile": "node_modules/nan/LICENSE.md"
-  },
   "nanomatch@1.2.13": {
     "licenses": "MIT",
     "repository": "https://github.com/micromatch/nanomatch",
