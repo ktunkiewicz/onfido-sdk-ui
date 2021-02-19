@@ -31,6 +31,20 @@ type CreateDocumentResponse = {
   document_media: Array<BinaryMediaPayload | DocumentFieldsList>
 }
 
+export const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result)
+      } else {
+        reject(new Error('Reader result type mismatched'))
+      }
+    }
+    reader.onerror = () => reject(reader.error)
+    reader.readAsArrayBuffer(file)
+  })
+
 const handleRequestFailed = (
   meta: XMLHttpRequest | Record<string, unknown>
 ): ExtendedError => {
@@ -81,7 +95,6 @@ export const uploadBinaryMedia = (
     )
 
     request.setRequestHeader('Authorization', `Bearer ${token}`)
-    request.setRequestHeader('Content-Type', 'multipart/form-data')
 
     request.onload = () => {
       const response = JSON.parse(request.response)
@@ -96,7 +109,7 @@ export const uploadBinaryMedia = (
     request.onerror = () => reject(handleRequestFailed(request))
 
     const formData = new FormData()
-    formData.append('media', file, 'document.jpg')
+    formData.append('media', file, file.name)
     request.send(formData)
   })
 
@@ -183,6 +196,7 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
 
   const handleFileChanged = (event: Event) => {
     const input = event.target as HTMLInputElement
+
     setFrontCapture(input.files[0])
     setBackCapture(input.files[1])
   }
