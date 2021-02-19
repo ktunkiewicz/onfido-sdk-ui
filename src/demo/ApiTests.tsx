@@ -155,6 +155,8 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   const [token, setToken] = useState(null)
   const [frontCapture, setFrontCapture] = useState<File>(null)
   const [backCapture, setBackCapture] = useState<File>(null)
+  const [videoCapture, setVideoCapture] = useState<File>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ExtendedError>(null)
   const [response, setResponse] = useState<CreateDocumentResponse>(null)
 
@@ -163,16 +165,20 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUploads = async () => {
+    setLoading(true)
     setError(null)
+    setResponse(null)
     const uuids: string[] = []
 
     try {
-      const { media_id: frontUuid } = await uploadBinaryMedia(
-        env,
-        token,
-        frontCapture
-      )
-      uuids.push(frontUuid)
+      if (frontCapture) {
+        const { media_id: frontUuid } = await uploadBinaryMedia(
+          env,
+          token,
+          frontCapture
+        )
+        uuids.push(frontUuid)
+      }
 
       if (backCapture) {
         const { media_id: backUuid } = await uploadBinaryMedia(
@@ -183,10 +189,21 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
         uuids.push(backUuid)
       }
 
+      if (videoCapture) {
+        const { media_id: videoUuid } = await uploadBinaryMedia(
+          env,
+          token,
+          videoCapture
+        )
+        uuids.push(videoUuid)
+      }
+
       const createDocumentRes = await createDocument(env, token, uuids)
       setResponse(createDocumentRes)
     } catch (error) {
       setError(error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -198,8 +215,13 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   const handleFileChanged = (event: Event) => {
     const input = event.target as HTMLInputElement
 
-    setFrontCapture(input.files[0])
-    setBackCapture(input.files[1])
+    const files = Array.from(input.files)
+    const images = files.filter((file) => file.type.includes('image'))
+    const videos = files.filter((file) => file.type.includes('video'))
+
+    setFrontCapture(images[0])
+    setBackCapture(images[1])
+    setVideoCapture(videos[0])
   }
 
   if (!token) {
@@ -218,9 +240,9 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
         }}
       >
         <input type="file" multiple onChange={handleFileChanged} />
-        {frontCapture && (
-          <button type="submit" style={{ margin: '1em 0' }}>
-            Upload
+        {(frontCapture || videoCapture) && (
+          <button disabled={loading} type="submit" style={{ margin: '1em 0' }}>
+            {loading ? 'Uploading...' : 'Upload'}
           </button>
         )}
         {error && (
