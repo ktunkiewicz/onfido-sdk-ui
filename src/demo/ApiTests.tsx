@@ -1,5 +1,5 @@
 import { h, FunctionComponent } from 'preact'
-import { memo, useEffect, useState } from 'preact/compat'
+import { memo, useCallback, useEffect, useState } from 'preact/compat'
 
 import type { ApiTestEnvs } from './types'
 
@@ -32,7 +32,7 @@ type CreateDocumentResponse = {
   document_type: 'IDENTITY_DOCUMENT' | 'OTHERS'
 }
 
-export const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
+const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
@@ -46,7 +46,7 @@ export const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
     reader.readAsArrayBuffer(file)
   })
 
-const sha256Hmac = async (key: string, message: string): Promise<string> => {
+const hmac256 = async (key: string, data: ArrayBuffer): Promise<string> => {
   const encoder = new TextEncoder()
   const encodedKey = encoder.encode(key)
 
@@ -58,14 +58,10 @@ const sha256Hmac = async (key: string, message: string): Promise<string> => {
       hash: { name: 'SHA-256' },
     },
     false,
-    ['sign', 'verify']
+    ['sign']
   )
 
-  const signature = await window.crypto.subtle.sign(
-    'HMAC',
-    cryptoKey,
-    encoder.encode(message)
-  )
+  const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, data)
 
   const digest = Array.prototype.map
     .call(new Uint8Array(signature), (x: number) =>
@@ -177,23 +173,94 @@ const createDocument = (
     request.send(JSON.stringify(body))
   })
 
-type Props = {
+type HmacTableProps = {
+  files?: File[]
+}
+
+const HmacTable: FunctionComponent<HmacTableProps> = ({ files }) => {
+  const [secret, setSecret] = useState<string>(String(Date.now()))
+  const [hmacs, setHmacs] = useState<Record<string, string>>({})
+
+  const computeHmac = (event?: Event) => {
+    if (event) {
+      event.preventDefault()
+    }
+
+    setHmacs(Object.fromEntries(files.map((file) => [file.name, null])))
+
+    files.forEach(async (file) => {
+      const data = await readFileAsBinary(file)
+      const digest = await hmac256(secret, data)
+      setHmacs((hmacs) => ({ ...hmacs, [file.name]: digest }))
+    })
+  }
+
+  useEffect(() => {
+    if (!files) {
+      return
+    }
+
+    computeHmac()
+  }, [files]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!files || !files.length) {
+    return null
+  }
+
+  return (
+    <div>
+      <h2>HMAC Table</h2>
+      <form onSubmit={computeHmac}>
+        <input
+          onChange={(event) =>
+            setSecret((event.target as HTMLInputElement).value)
+          }
+          value={secret}
+        />
+        <button type="submit">Compute HMAC</button>
+      </form>
+      {files.length > 0 && (
+        <table style={{ marginTop: '1em' }}>
+          <thead>
+            <tr>
+              <td style={{ textAlign: 'left' }}>File name</td>
+              <td>Digest</td>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(hmacs).map(([fileName, digest]) => (
+              <tr key={digest} style={{ marginTop: '1em' }}>
+                <td style={{ textAlign: 'left' }}>
+                  <pre>{fileName}:</pre>
+                </td>
+                <td>
+                  <pre>{digest == null ? 'Computing...' : digest}</pre>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+type ApiTestsProps = {
   env: ApiTestEnvs
 }
 
-const ApiTests: FunctionComponent<Props> = ({ env }) => {
+const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
   const [token, setToken] = useState(null)
+  const [allFiles, setAllFiles] = useState<File[]>(null)
   const [frontCapture, setFrontCapture] = useState<File>(null)
   const [backCapture, setBackCapture] = useState<File>(null)
   const [videoCapture, setVideoCapture] = useState<File>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ExtendedError>(null)
   const [response, setResponse] = useState<CreateDocumentResponse>(null)
-  const [hmac, setHmac] = useState<string>(null)
 
   useEffect(() => {
     getToken(env).then(setToken)
-    sha256Hmac('abcdef', 'Hello world!').then(setHmac)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUploads = async () => {
@@ -248,6 +315,8 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
     const input = event.target as HTMLInputElement
 
     const files = Array.from(input.files)
+    setAllFiles(files)
+
     const images = files.filter((file) => file.type.includes('image'))
     const videos = files.filter((file) => file.type.includes('video'))
 
@@ -263,7 +332,6 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   return (
     <div style={{ margin: '0 auto', maxWidth: '30em' }}>
       <h1>v4 API tests</h1>
-      <code>{hmac}</code>
       <form
         onSubmit={handleFormSubmit}
         style={{
@@ -291,6 +359,7 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
           </div>
         )}
       </form>
+      <HmacTable files={allFiles} />
     </div>
   )
 }
