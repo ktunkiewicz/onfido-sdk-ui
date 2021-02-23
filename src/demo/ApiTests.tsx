@@ -46,6 +46,36 @@ export const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
     reader.readAsArrayBuffer(file)
   })
 
+const sha256Hmac = async (key: string, message: string): Promise<string> => {
+  const encoder = new TextEncoder()
+  const encodedKey = encoder.encode(key)
+
+  const cryptoKey = await window.crypto.subtle.importKey(
+    'raw',
+    encodedKey,
+    {
+      name: 'HMAC',
+      hash: { name: 'SHA-256' },
+    },
+    false,
+    ['sign', 'verify']
+  )
+
+  const signature = await window.crypto.subtle.sign(
+    'HMAC',
+    cryptoKey,
+    encoder.encode(message)
+  )
+
+  const digest = Array.prototype.map
+    .call(new Uint8Array(signature), (x: number) =>
+      `00${x.toString(16)}`.slice(-2)
+    )
+    .join('')
+
+  return digest
+}
+
 const handleRequestFailed = (
   meta: XMLHttpRequest | Record<string, unknown>
 ): ExtendedError => {
@@ -159,9 +189,11 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ExtendedError>(null)
   const [response, setResponse] = useState<CreateDocumentResponse>(null)
+  const [hmac, setHmac] = useState<string>(null)
 
   useEffect(() => {
     getToken(env).then(setToken)
+    sha256Hmac('abcdef', 'Hello world!').then(setHmac)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUploads = async () => {
@@ -231,6 +263,7 @@ const ApiTests: FunctionComponent<Props> = ({ env }) => {
   return (
     <div style={{ margin: '0 auto', maxWidth: '30em' }}>
       <h1>v4 API tests</h1>
+      <code>{hmac}</code>
       <form
         onSubmit={handleFormSubmit}
         style={{
