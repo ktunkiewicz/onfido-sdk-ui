@@ -26,7 +26,7 @@ const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
     const baseUrl =
       env === 'dev' || env === 'pre-prod'
         ? `https://sdk-token-factory.eu-west-1.${env}.onfido.xyz`
-        : 'https://token-factory.onfido.com/sdk_token'
+        : 'https://token-factory.onfido.com'
     request.open('GET', `${baseUrl}/sdk_token`)
 
     request.setRequestHeader(
