@@ -149,9 +149,7 @@
         "type": "validation_error",
         "message": "There was a validation error on this request",
         "fields": {
-          "detect_cutoff": [
-            "cutoff document detected in image"
-          ]
+          "detect_cutoff": ["cutoff document detected in image"]
         }
       }
     }
