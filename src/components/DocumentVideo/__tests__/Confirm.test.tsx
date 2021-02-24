@@ -13,10 +13,17 @@ import {
   fakeDrivingLicenceFrontResponse,
   fakeDrivingLicenceBackResponse,
   fakeDrivingLicenceVideoResponse,
+  fakeCreateV4DocumentResponse,
   fakeNoDocumentError,
   fakeUnknownError,
+  fakeAccessDeniedError,
 } from '~jest/responses'
-import { uploadDocument, uploadDocumentVideo } from '~utils/onfidoApi'
+import {
+  uploadDocument,
+  uploadDocumentVideo,
+  uploadBinaryMedia,
+  createV4Document,
+} from '~utils/onfidoApi'
 import '../../utils/__mocks__/objectUrl' // eslint-disable-line jest/no-mocks-import
 import Confirm from '../Confirm'
 
@@ -33,6 +40,12 @@ const mockedUploadDocument = uploadDocument as jest.MockedFunction<
 >
 const mockedUploadDocumentVideo = uploadDocumentVideo as jest.MockedFunction<
   typeof uploadDocumentVideo
+>
+const mockedUploadBinaryMedia = uploadBinaryMedia as jest.MockedFunction<
+  typeof uploadBinaryMedia
+>
+const mockedCreateV4Document = createV4Document as jest.MockedFunction<
+  typeof createV4Document
 >
 
 const runAllPromises = () => new Promise(setImmediate)
@@ -232,7 +245,11 @@ describe('DocumentVideo', () => {
         expect(defaultProps.previousStep).toHaveBeenCalled()
       })
 
-      describe('when upload success', () => {
+      describe('when upload success - v3 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
+          return
+        }
+
         beforeEach(() => {
           mockedUploadDocument.mockResolvedValue(fakePassportImageResponse)
           mockedUploadDocumentVideo.mockResolvedValue(fakePassportVideoResponse)
@@ -285,7 +302,80 @@ describe('DocumentVideo', () => {
                 metadata: {
                   id: fakePassportVideoResponse.id,
                   type: fakeDocumentType,
-                  variant: 'video',
+                },
+              },
+            },
+          ])
+
+          expect(defaultProps.nextStep).toHaveBeenCalled()
+        })
+      })
+
+      describe('when upload success - v4 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
+          return
+        }
+
+        const imageMediaUuid = 'fake-image-media-id'
+        const videoMediaUuid = 'fake-image-media-id'
+
+        beforeEach(() => {
+          mockedUploadBinaryMedia
+            .mockResolvedValueOnce({
+              media_id: imageMediaUuid,
+            })
+            .mockResolvedValueOnce({
+              media_id: videoMediaUuid,
+            })
+          mockedCreateV4Document.mockResolvedValue(fakeCreateV4DocumentResponse)
+          simulateButtonClick(wrapper)
+        })
+
+        it('renders spinner correctly', async () => {
+          assertSpinner(wrapper)
+
+          await runAllPromises()
+
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledWith(
+            {
+              file: fakeFrontPayload.blob,
+              filename: fakeFrontPayload.filename,
+              sdkMetadata: fakeFrontPayload.sdkMetadata,
+            },
+            fakeUrl,
+            fakeToken
+          )
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledWith(
+            {
+              file: fakeVideoPayload.blob,
+              filename: fakeVideoPayload.filename,
+              sdkMetadata: fakeVideoPayload.sdkMetadata,
+            },
+            fakeUrl,
+            fakeToken,
+            true // includes file HMAC Auth
+          )
+          expect(mockedCreateV4Document).toHaveBeenCalledWith(
+            [imageMediaUuid, videoMediaUuid],
+            fakeUrl,
+            fakeToken
+          )
+
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledTimes(2)
+          expect(mockedCreateV4Document).toHaveBeenCalledTimes(1)
+
+          expect(mockedStore.getActions()).toMatchObject([
+            {
+              type: 'CAPTURE_DELETE',
+              payload: { method: 'document', side: 'front' },
+            },
+            {
+              type: 'SET_CAPTURE_METADATA',
+              payload: {
+                captureId: fakeVideoPayload.id,
+                metadata: {
+                  id: fakeCreateV4DocumentResponse.uuid,
+                  media_uuids: [imageMediaUuid, videoMediaUuid],
                 },
               },
             },
@@ -361,12 +451,15 @@ describe('DocumentVideo', () => {
         expect(defaultProps.previousStep).toHaveBeenCalled()
       })
 
-      describe('when upload success', () => {
+      describe('when upload success - v3 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
+          return
+        }
+
         beforeEach(() => {
-          mockedUploadDocument.mockResolvedValueOnce(
-            fakeDrivingLicenceFrontResponse
-          )
-          mockedUploadDocument.mockResolvedValue(fakeDrivingLicenceBackResponse)
+          mockedUploadDocument
+            .mockResolvedValueOnce(fakeDrivingLicenceFrontResponse)
+            .mockResolvedValue(fakeDrivingLicenceBackResponse)
           mockedUploadDocumentVideo.mockResolvedValue(
             fakeDrivingLicenceVideoResponse
           )
@@ -444,7 +537,6 @@ describe('DocumentVideo', () => {
                 metadata: {
                   id: fakePassportVideoResponse.id,
                   type: fakeDocumentType,
-                  variant: 'video',
                 },
               },
             },
@@ -454,7 +546,102 @@ describe('DocumentVideo', () => {
         })
       })
 
-      describe('when upload failed', () => {
+      describe('when upload success - v4 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
+          return
+        }
+
+        const frontMediaUuid = 'fake-front-media-id'
+        const backMediaUuid = 'fake-back-media-id'
+        const videoMediaUuid = 'fake-video-media-id'
+
+        beforeEach(() => {
+          mockedUploadBinaryMedia
+            .mockResolvedValueOnce({
+              media_id: frontMediaUuid,
+            })
+            .mockResolvedValueOnce({
+              media_id: backMediaUuid,
+            })
+            .mockResolvedValueOnce({
+              media_id: videoMediaUuid,
+            })
+          mockedCreateV4Document.mockResolvedValue(fakeCreateV4DocumentResponse)
+          simulateButtonClick(wrapper)
+        })
+
+        it('renders spinner correctly', async () => {
+          assertSpinner(wrapper)
+
+          await runAllPromises()
+
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledWith(
+            {
+              file: fakeFrontPayload.blob,
+              filename: fakeFrontPayload.filename,
+              sdkMetadata: fakeFrontPayload.sdkMetadata,
+            },
+            fakeUrl,
+            fakeToken
+          )
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledWith(
+            {
+              file: fakeBackPayload.blob,
+              filename: fakeBackPayload.filename,
+              sdkMetadata: fakeBackPayload.sdkMetadata,
+            },
+            fakeUrl,
+            fakeToken
+          )
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledWith(
+            {
+              file: fakeVideoPayload.blob,
+              filename: fakeVideoPayload.filename,
+              sdkMetadata: fakeVideoPayload.sdkMetadata,
+            },
+            fakeUrl,
+            fakeToken,
+            true // includes file HMAC Auth
+          )
+          expect(mockedCreateV4Document).toHaveBeenCalledWith(
+            [frontMediaUuid, backMediaUuid, videoMediaUuid],
+            fakeUrl,
+            fakeToken
+          )
+
+          expect(mockedUploadBinaryMedia).toHaveBeenCalledTimes(3)
+          expect(mockedCreateV4Document).toHaveBeenCalledTimes(1)
+
+          expect(mockedStore.getActions()).toMatchObject([
+            {
+              type: 'CAPTURE_DELETE',
+              payload: { method: 'document', side: 'front' },
+            },
+            {
+              type: 'CAPTURE_DELETE',
+              payload: { method: 'document', side: 'back' },
+            },
+            {
+              type: 'SET_CAPTURE_METADATA',
+              payload: {
+                captureId: fakeVideoPayload.id,
+                metadata: {
+                  id: fakeCreateV4DocumentResponse.uuid,
+                  media_uuids: [frontMediaUuid, backMediaUuid, videoMediaUuid],
+                },
+              },
+            },
+          ])
+
+          expect(defaultProps.nextStep).toHaveBeenCalled()
+        })
+      })
+
+      describe('when upload failed - v3 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true') {
+          return
+        }
+
         describe('with no document error', () => {
           beforeEach(() => {
             mockedUploadDocument.mockRejectedValue(fakeNoDocumentError)
@@ -510,6 +697,23 @@ describe('DocumentVideo', () => {
               })
             })
           })
+        })
+      })
+
+      describe('when upload failed - v4 APIs', () => {
+        if (process.env.USE_V4_APIS_FOR_DOC_VIDEO !== 'true') {
+          return
+        }
+
+        beforeEach(() => {
+          mockedUploadBinaryMedia.mockRejectedValue(fakeAccessDeniedError)
+          simulateButtonClick(wrapper)
+        })
+
+        it('renders REQUEST_ERROR error correctly', async () => {
+          await runAllPromises()
+          wrapper.update()
+          assertError(wrapper, false)
         })
       })
     })

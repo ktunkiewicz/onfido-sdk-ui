@@ -4,7 +4,12 @@ import type { Dispatch } from 'redux'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { LocaleContext } from '~locales'
-import { uploadDocument, uploadDocumentVideo } from '~utils/onfidoApi'
+import {
+  uploadDocument,
+  uploadDocumentVideo,
+  uploadBinaryMedia,
+  createV4Document,
+} from '~utils/onfidoApi'
 import { actions } from 'components/ReduxAppWrapper/store/actions'
 import Button from '../../Button'
 import Error from '../../Error'
@@ -45,7 +50,7 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
     (state) => state.globals.idDocumentIssuingCountry
   )
 
-  const onUploadDocument = useCallback(async () => {
+  const onUploadDocumentsV3 = useCallback(async () => {
     setLoading(true)
 
     const issuingCountryData =
@@ -143,6 +148,99 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
     issuingCountry,
   ])
 
+  const onUploadDocumentsV4 = useCallback(async () => {
+    setLoading(true)
+
+    const mediaUuids = []
+
+    try {
+      const { media_id: frontMediaUuid } = await uploadBinaryMedia(
+        {
+          file: documentFront.blob,
+          filename: documentFront.filename,
+          sdkMetadata: documentFront.sdkMetadata,
+        },
+        apiUrl,
+        token
+      )
+
+      mediaUuids.push(frontMediaUuid)
+      dispatch(
+        actions.deleteCapture({
+          method: 'document',
+          side: 'front',
+        })
+      )
+
+      if (documentBack) {
+        const { media_id: backMediaUuid } = await uploadBinaryMedia(
+          {
+            file: documentBack.blob,
+            filename: documentBack.filename,
+            sdkMetadata: documentBack.sdkMetadata,
+          },
+          apiUrl,
+          token
+        )
+
+        mediaUuids.push(backMediaUuid)
+        dispatch(
+          actions.deleteCapture({
+            method: 'document',
+            side: 'back',
+          })
+        )
+      }
+
+      const { media_id: videoMediaUuid } = await uploadBinaryMedia(
+        {
+          file: documentVideo.blob,
+          filename: documentVideo.filename,
+          sdkMetadata: documentVideo.sdkMetadata,
+        },
+        apiUrl,
+        token,
+        true // includes file HMAC Auth
+      )
+
+      mediaUuids.push(videoMediaUuid)
+
+      const { uuid: documentUuid } = await createV4Document(
+        mediaUuids,
+        apiUrl,
+        token
+      )
+
+      dispatch(
+        actions.setCaptureMetadata({
+          capture: documentVideo,
+          apiResponse: {
+            id: documentUuid,
+            media_uuids: mediaUuids,
+          },
+        })
+      )
+
+      nextStep()
+    } catch (errorResponse) {
+      setLoading(false)
+      setError({ name: 'REQUEST_ERROR', type: 'error' })
+    }
+  }, [
+    nextStep,
+    token,
+    dispatch,
+    apiUrl,
+    documentFront,
+    documentBack,
+    documentVideo,
+  ])
+
+  const onUploadDocuments =
+    process.env.USE_V4_APIS_FOR_DOC_VIDEO === 'true'
+      ? onUploadDocumentsV4
+      : onUploadDocumentsV3
+
   const onSecondaryClick = useCallback(() => {
     if (error || previewing) {
       previousStep()
@@ -162,7 +260,7 @@ const Confirm: FunctionComponent<StepComponentDocumentProps> = ({
       {!error && <Content capture={documentVideo} previewing={previewing} />}
       <div className={style.buttonsContainer}>
         <Button
-          onClick={onUploadDocument}
+          onClick={onUploadDocuments}
           variants={['primary', 'lg', 'centered']}
         >
           {translate('doc_video_confirmation.button_upload')}
