@@ -1,92 +1,33 @@
 import { h, FunctionComponent } from 'preact'
-import { memo, useCallback, useEffect, useState } from 'preact/compat'
+import { memo, useEffect, useState } from 'preact/compat'
+import { uploadBinaryMedia, createV4Document } from '~utils/onfidoApi'
 
+import type { CreateV4DocumentResponse } from '~types/api'
 import type { ApiTestEnvs } from './types'
 
 interface ExtendedError extends Error {
   meta: XMLHttpRequest | Record<string, unknown>
 }
 
-type BinaryMediaReponse = {
-  media_id: string
-}
-
-type BinaryMediaPayload = {
-  binary_media: { uuid: string }
-}
-
-type DocumentFieldPayload = {
-  name: string
-  raw_value: string
-  source: string
-}
-
-type DocumentFieldsList = {
-  document_fields: DocumentFieldPayload[]
-}
-
-type CreateDocumentResponse = {
-  applicant_uuid: string
-  document_uuid: string
-  document_media: Array<BinaryMediaPayload | DocumentFieldsList>
-  document_type: 'IDENTITY_DOCUMENT' | 'OTHERS'
-}
-
-const readFileAsBinary = (file: File): Promise<ArrayBuffer> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (reader.result instanceof ArrayBuffer) {
-        resolve(reader.result)
-      } else {
-        reject(new Error('Reader result type mismatched'))
-      }
-    }
-    reader.onerror = () => reject(reader.error)
-    reader.readAsArrayBuffer(file)
-  })
-
-const hmac256 = async (key: string, data: ArrayBuffer): Promise<string> => {
-  const encoder = new TextEncoder()
-  const encodedKey = encoder.encode(key)
-
-  const cryptoKey = await window.crypto.subtle.importKey(
-    'raw',
-    encodedKey,
-    {
-      name: 'HMAC',
-      hash: { name: 'SHA-256' },
-    },
-    false,
-    ['sign']
-  )
-
-  const signature = await window.crypto.subtle.sign('HMAC', cryptoKey, data)
-
-  const digest = Array.prototype.map
-    .call(new Uint8Array(signature), (x: number) =>
-      `00${x.toString(16)}`.slice(-2)
-    )
-    .join('')
-
-  return digest
-}
-
-const handleRequestFailed = (
-  meta: XMLHttpRequest | Record<string, unknown>
-): ExtendedError => {
-  const error = new Error('Request failed')
-  Object.assign(error, { meta })
-  return error as ExtendedError
+const buildBaseUrl = (env: ApiTestEnvs): string => {
+  switch (env) {
+    case 'dev':
+    case 'pre-prod':
+      return `https://api-gateway.eu-west-1.${env}.onfido.xyz`
+    case 'production':
+    default:
+      return 'https://api.onfido.com'
+  }
 }
 
 const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
   new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
-    request.open(
-      'GET',
-      `https://sdk-token-factory.eu-west-1.${env}.onfido.xyz/sdk_token`
-    )
+    const baseUrl =
+      env === 'dev' || env === 'pre-prod'
+        ? `https://sdk-token-factory.eu-west-1.${env}.onfido.xyz`
+        : 'https://token-factory.onfido.com/sdk_token'
+    request.open('GET', `${baseUrl}/sdk_token`)
 
     request.setRequestHeader(
       'Authorization',
@@ -100,150 +41,14 @@ const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
         const { message: token } = response || {}
         resolve(token)
       } else {
-        reject(handleRequestFailed(response))
+        reject(new Error(request.response))
       }
     }
 
-    request.onerror = () => reject(handleRequestFailed(request))
+    request.onerror = () => reject(new Error('Request failed'))
 
     request.send()
   })
-
-export const uploadBinaryMedia = (
-  env: ApiTestEnvs,
-  token: string,
-  file: File
-): Promise<BinaryMediaReponse> =>
-  new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest()
-    request.open(
-      'POST',
-      `https://api-gateway.eu-west-1.${env}.onfido.xyz/v4/binary_media`
-    )
-
-    request.setRequestHeader('Authorization', `Bearer ${token}`)
-
-    request.onload = () => {
-      const response = JSON.parse(request.response)
-
-      if (request.status === 200 || request.status === 201) {
-        resolve(response)
-      } else {
-        reject(handleRequestFailed(response))
-      }
-    }
-
-    request.onerror = () => reject(handleRequestFailed(request))
-
-    const formData = new FormData()
-    formData.append('media', file, file.name)
-    request.send(formData)
-  })
-
-const createDocument = (
-  env: ApiTestEnvs,
-  token: string,
-  uuids: string[]
-): Promise<CreateDocumentResponse> =>
-  new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest()
-    request.open(
-      'POST',
-      `https://api-gateway.eu-west-1.${env}.onfido.xyz/v4/documents`
-    )
-
-    request.setRequestHeader('Authorization', `Bearer ${token}`)
-    request.setRequestHeader('Content-Type', 'application/json')
-
-    request.onload = () => {
-      const response = JSON.parse(request.response)
-
-      if (request.status === 200 || request.status === 201) {
-        resolve(response)
-      } else {
-        reject(handleRequestFailed(response))
-      }
-    }
-
-    request.onerror = () => reject(handleRequestFailed(request))
-
-    const body = {
-      document_media: uuids.map((uuid) => ({ binary_media: { uuid } })),
-    }
-    request.send(JSON.stringify(body))
-  })
-
-type HmacTableProps = {
-  files?: File[]
-}
-
-const HmacTable: FunctionComponent<HmacTableProps> = ({ files }) => {
-  const [secret, setSecret] = useState<string>(String(Date.now()))
-  const [hmacs, setHmacs] = useState<Record<string, string>>({})
-
-  const computeHmac = (event?: Event) => {
-    if (event) {
-      event.preventDefault()
-    }
-
-    setHmacs(Object.fromEntries(files.map((file) => [file.name, null])))
-
-    files.forEach(async (file) => {
-      const data = await readFileAsBinary(file)
-      const digest = await hmac256(secret, data)
-      setHmacs((hmacs) => ({ ...hmacs, [file.name]: digest }))
-    })
-  }
-
-  useEffect(() => {
-    if (!files) {
-      return
-    }
-
-    computeHmac()
-  }, [files]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!files || !files.length) {
-    return null
-  }
-
-  return (
-    <div>
-      <h2>HMAC Table</h2>
-      <form onSubmit={computeHmac}>
-        <input
-          onChange={(event) =>
-            setSecret((event.target as HTMLInputElement).value)
-          }
-          value={secret}
-        />
-        <button type="submit">Compute HMAC</button>
-      </form>
-      {files.length > 0 && (
-        <table style={{ marginTop: '1em' }}>
-          <thead>
-            <tr>
-              <td style={{ textAlign: 'left' }}>File name</td>
-              <td>Digest</td>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(hmacs).map(([fileName, digest]) => (
-              <tr key={digest} style={{ marginTop: '1em' }}>
-                <td style={{ textAlign: 'left' }}>
-                  <pre>{fileName}:</pre>
-                </td>
-                <td>
-                  <pre>{digest == null ? 'Computing...' : digest}</pre>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  )
-}
 
 type ApiTestsProps = {
   env: ApiTestEnvs
@@ -251,13 +56,12 @@ type ApiTestsProps = {
 
 const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
   const [token, setToken] = useState(null)
-  const [allFiles, setAllFiles] = useState<File[]>(null)
   const [frontCapture, setFrontCapture] = useState<File>(null)
   const [backCapture, setBackCapture] = useState<File>(null)
   const [videoCapture, setVideoCapture] = useState<File>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<ExtendedError>(null)
-  const [response, setResponse] = useState<CreateDocumentResponse>(null)
+  const [response, setResponse] = useState<CreateV4DocumentResponse>(null)
 
   useEffect(() => {
     getToken(env).then(setToken)
@@ -267,37 +71,39 @@ const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
     setLoading(true)
     setError(null)
     setResponse(null)
+    const baseUrl = buildBaseUrl(env)
     const uuids: string[] = []
 
     try {
       if (frontCapture) {
         const { media_id: frontUuid } = await uploadBinaryMedia(
-          env,
-          token,
-          frontCapture
+          { file: frontCapture, filename: frontCapture.name, sdkMetadata: {} },
+          baseUrl,
+          token
         )
         uuids.push(frontUuid)
       }
 
       if (backCapture) {
         const { media_id: backUuid } = await uploadBinaryMedia(
-          env,
-          token,
-          backCapture
+          { file: backCapture, filename: backCapture.name, sdkMetadata: {} },
+          baseUrl,
+          token
         )
         uuids.push(backUuid)
       }
 
       if (videoCapture) {
         const { media_id: videoUuid } = await uploadBinaryMedia(
-          env,
+          { file: videoCapture, filename: videoCapture.name, sdkMetadata: {} },
+          baseUrl,
           token,
-          videoCapture
+          true
         )
         uuids.push(videoUuid)
       }
 
-      const createDocumentRes = await createDocument(env, token, uuids)
+      const createDocumentRes = await createV4Document(uuids, baseUrl, token)
       setResponse(createDocumentRes)
     } catch (error) {
       setError(error)
@@ -315,8 +121,6 @@ const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
     const input = event.target as HTMLInputElement
 
     const files = Array.from(input.files)
-    setAllFiles(files)
-
     const images = files.filter((file) => file.type.includes('image'))
     const videos = files.filter((file) => file.type.includes('video'))
 
@@ -359,7 +163,6 @@ const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
           </div>
         )}
       </form>
-      <HmacTable files={allFiles} />
     </div>
   )
 }
