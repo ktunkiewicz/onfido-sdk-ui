@@ -1,5 +1,5 @@
 import { h, FunctionComponent } from 'preact'
-import { memo, useContext, useEffect, useRef, useState } from 'preact/compat'
+import { memo, useContext, useRef, useState } from 'preact/compat'
 import Webcam from 'react-webcam-onfido'
 
 import { mimeType } from '~utils/blob'
@@ -54,25 +54,6 @@ const DocumentVideo: FunctionComponent<Props> = ({
   const [frontPayload, setFrontPayload] = useState<CapturePayload>(null)
   const { translate } = useContext(LocaleContext)
   const webcamRef = useRef<Webcam>(null)
-  const [webcamInfo, setWebcamInfo] = useState<Record<string, unknown>>(null)
-
-  useEffect(() => {
-    setTimeout(() => {
-      if (!webcamInfo && webcamRef.current && webcamRef.current.stream) {
-        const [track] = webcamRef.current.stream.getVideoTracks()
-
-        setWebcamInfo({
-          settings: track.getSettings(),
-          constraints: track.getConstraints(),
-          capabilities: track.getCapabilities(),
-        })
-      }
-    }, 3000)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    console.log(JSON.stringify(webcamInfo, null, 2))
-  }, [webcamInfo])
 
   const onRecordingStart = () => {
     nextStep()
@@ -133,6 +114,17 @@ const DocumentVideo: FunctionComponent<Props> = ({
     subtitle,
     title,
     totalSteps,
+    /* onStart: () => {
+      if (!webcamInfo && webcamRef.current && webcamRef.current.stream) {
+        const [track] = webcamRef.current.stream.getVideoTracks()
+
+        setWebcamInfo({
+          settings: track.getSettings(),
+          constraints: track.getConstraints(),
+          capabilities: track.getCapabilities(),
+        })
+      }
+    }, */
   }
 
   return (
@@ -151,26 +143,7 @@ const DocumentVideo: FunctionComponent<Props> = ({
           tilt={step === 'tilt' ? TILT_MODE : undefined}
           type={documentType}
           withPlaceholder={step === 'intro'}
-        >
-          <code
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              top: 0,
-              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-              color: 'black',
-              overflow: 'auto',
-              padding: '3em 1em',
-              textAlign: 'left',
-              width: '100%',
-              zIndex: 10,
-            }}
-          >
-            {JSON.stringify(webcamInfo, null, 2)}
-          </code>
-        </DocumentOverlay>
+        />
       )}
       renderVideoLayer={(props) => <VideoLayer {...props} {...passedProps} />}
       trackScreen={trackScreen}
