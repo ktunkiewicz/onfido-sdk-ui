@@ -41,6 +41,7 @@ export type QueryParams = {
   useUploader?: StringifiedBoolean
   useWebcam?: StringifiedBoolean
   v4ApiTests?: ApiTestEnvs
+  mediaDeviceTests?: StringifiedBoolean
 }
 
 export type CheckData = {

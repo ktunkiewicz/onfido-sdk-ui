@@ -1,8 +1,11 @@
 import { h, render, FunctionComponent } from 'preact'
 import { BrowserRouter as Router, Route, Link } from 'react-router-dom'
 import { queryParamToValueString } from './demoUtils'
-import ApiTests from './ApiTests'
 import SdkDemo from './SdkDemo'
+
+// Tests
+import ApiTests from './ApiTests'
+import MediaDeviceTests from './MediaDeviceTests'
 
 const Header: FunctionComponent = () => <h1>Onfido SDK UI Demo</h1>
 
@@ -38,7 +41,7 @@ const DummyHostApp: FunctionComponent = () => (
 const renderDemoApp = () => {
   let messagePort: MessagePort = null
   const rootNode = document.getElementById('demo-app')
-  const { useHistory, v4ApiTests } = queryParamToValueString
+  const { useHistory, v4ApiTests, mediaDeviceTests } = queryParamToValueString
 
   const onMessage = (event: MessageEvent) => {
     if (event.data.type === 'RENDER') {
@@ -64,6 +67,11 @@ const renderDemoApp = () => {
 
   if (v4ApiTests) {
     render(<ApiTests env={v4ApiTests} />, rootNode)
+    return
+  }
+
+  if (mediaDeviceTests) {
+    render(<MediaDeviceTests />, rootNode)
     return
   }
 

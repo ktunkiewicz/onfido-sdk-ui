@@ -50,61 +50,6 @@ const getToken = (env: ApiTestEnvs): Promise<string | undefined> =>
     request.send()
   })
 
-const MediaDevicesTest: FunctionComponent = () => {
-  const [mediaSettings, setMediaSettings] = useState<MediaTrackSettings[]>([])
-
-  const getVideoTracks = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    const tracks = stream.getVideoTracks()
-    setMediaSettings(tracks.map((track) => track.getSettings()))
-  }
-
-  const validate = (value: number, threshold: number) =>
-    value >= threshold ? '✅' : '❌'
-
-  useEffect(() => {
-    getVideoTracks()
-  }, [])
-
-  return (
-    <div>
-      <h1>Media devices test</h1>
-      {mediaSettings.length && (
-        <table style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              <td>No.</td>
-              <td>Aspect ratio</td>
-              <td>Frame rate</td>
-              <td>Height</td>
-              <td>Width</td>
-            </tr>
-          </thead>
-          <tbody>
-            {mediaSettings.map(
-              ({ deviceId, aspectRatio, frameRate, height, width }, index) => (
-                <tr key={deviceId}>
-                  <td>{index + 1}</td>
-                  <td>{aspectRatio}</td>
-                  <td>
-                    {frameRate} {validate(frameRate, 24)}
-                  </td>
-                  <td>
-                    {height} {validate(height, 1280)}
-                  </td>
-                  <td>
-                    {width} {validate(height, 720)}
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      )}
-    </div>
-  )
-}
-
 type ApiTestsProps = {
   env: ApiTestEnvs
 }
@@ -218,7 +163,6 @@ const ApiTests: FunctionComponent<ApiTestsProps> = ({ env }) => {
           </div>
         )}
       </form>
-      <MediaDevicesTest />
     </div>
   )
 }
