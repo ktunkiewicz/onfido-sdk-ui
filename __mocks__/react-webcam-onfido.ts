@@ -16,7 +16,14 @@ export default class Webcam extends Component<WebcamProps> {
     getAudioTracks: jest.fn().mockReturnValue([{ label: 'fake-audio-track' }]),
     getTrackById: jest.fn(),
     getTracks: jest.fn(),
-    getVideoTracks: jest.fn().mockReturnValue([{ label: 'fake-video-track' }]),
+    getVideoTracks: jest.fn().mockReturnValue([
+      {
+        label: 'fake-video-track',
+        getCapabilities: jest.fn().mockReturnValue([]),
+        getConstraints: jest.fn().mockReturnValue([]),
+        getSettings: jest.fn().mockReturnValue([]),
+      },
+    ]),
     onaddtrack: jest.fn(),
     onremovetrack: jest.fn(),
     removeEventListener: jest.fn(),
