@@ -67,7 +67,7 @@ const DocumentVideo: FunctionComponent<Props> = ({
           capabilities: track.getCapabilities(),
         })
       }
-    }, 100)
+    }, 3000)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
